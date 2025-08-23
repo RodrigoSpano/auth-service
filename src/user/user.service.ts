@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Inject,
@@ -7,8 +8,8 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
-import mongoose, { Document, type HydratedDocument } from 'mongoose';
-import { IUser } from 'src/types';
+import mongoose, { type HydratedDocument } from 'mongoose';
+import type { IUser, IUserDocument } from 'src/types';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
@@ -54,9 +55,9 @@ export class UserService {
     }
   }
 
-  async findOneById(id: string): Promise<HydratedDocument<IUser>> {
+  async findOneById(id: string): Promise<IUserDocument> {
     try {
-      const findUser = await this.userModel.findById(id);
+      const findUser = (await this.userModel.findById(id)) as IUserDocument;
       if (!findUser) {
         throw new NotFoundException();
       }
@@ -70,8 +71,18 @@ export class UserService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
     try {
       // verify if user exists
-      await this.findOneById(id);
-      await this.userModel.updateOne({ _id: id }, updateUserDto);
+      const user = await this.findOneById(id);
+
+      let finalData: UpdateUserDto = updateUserDto;
+      if (
+        updateUserDto.password != undefined &&
+        updateUserDto.password.length > 0
+      ) {
+        const { password } = updateUserDto;
+        const hashedPass = await user.hashPass(password);
+        finalData = { ...updateUserDto, password: hashedPass };
+      }
+      await this.userModel.updateOne({ _id: id }, finalData);
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();

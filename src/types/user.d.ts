@@ -5,3 +5,8 @@ export interface IUser {
   fullname: string;
   password: string;
 }
+
+export interface IUserDocument extends IUser, Document {
+  comparePassword(): Promise<boolean>;
+  hashPass(password: string): promise<string>;
+}
