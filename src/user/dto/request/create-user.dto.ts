@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsEmail, IsString, Min } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
 import type { IUser } from 'src/types';
 
 export class CreateUserDto implements IUser {
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @IsString()
-  @Min(8)
+  @IsNotEmpty()
+  @MinLength(8)
   password: string;
 
   @IsString()
-  @Min(4)
+  @IsNotEmpty()
+  @MinLength(4)
   fullname: string;
 }

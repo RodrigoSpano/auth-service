@@ -5,5 +5,3 @@ export interface IUser {
   fullname: string;
   password: string;
 }
-
-export interface IUserSchema extends IUser, Document {}

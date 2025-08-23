@@ -1,36 +1,111 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
-import mongoose from 'mongoose';
+import mongoose, { Document, type HydratedDocument } from 'mongoose';
 import { IUser } from 'src/types';
+import { faker } from '@faker-js/faker';
 
 @Injectable()
 export class UserService {
   constructor(
     @Inject('USER_MODEL')
-    private readonly userModel: mongoose.Model<IUser>,
+    private readonly userModel: mongoose.Model<HydratedDocument<IUser>>,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    console.log(createUserDto);
-    const newUser = new this.userModel(createUserDto, { new: true });
-    await newUser.save();
-    return newUser;
+  async create(createUserDto: CreateUserDto): Promise<HydratedDocument<IUser>> {
+    try {
+      const newUser = await this.userModel.create(createUserDto);
+      if (!newUser) {
+        throw new BadRequestException();
+      }
+      return newUser;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
   }
 
-  findAll() {
-    return `This action returns all user`;
+  // todo => filters/queries
+  async findAll(): Promise<IUser[]> {
+    try {
+      return await this.userModel.find({});
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOneByEmail(email: string): Promise<HydratedDocument<IUser>> {
+    try {
+      const findUser = await this.userModel.findOne({ email });
+      if (!findUser) {
+        throw new NotFoundException();
+      }
+      return findUser;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async findOneById(id: string): Promise<HydratedDocument<IUser>> {
+    try {
+      const findUser = await this.userModel.findById(id);
+      if (!findUser) {
+        throw new NotFoundException();
+      }
+      return findUser;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
+    try {
+      // verify if user exists
+      await this.findOneById(id);
+      await this.userModel.updateOne({ _id: id }, updateUserDto);
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async remove(id: string) {
+    try {
+      const findUser = await this.findOneById(id);
+      await this.userModel.deleteOne({ _id: id });
+      return `user ${findUser.fullname} deleted`;
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async deleteAll() {
+    await this.userModel.deleteMany({});
+    console.log('all deleted');
+  }
+
+  async seed() {
+    try {
+      const fakeArr: IUser[] = Array.from({ length: 20 }, () => ({
+        fullname: faker.internet.username(),
+        email: faker.internet.email(),
+        password: faker.internet.password(),
+      }));
+      await this.userModel.insertMany(fakeArr);
+      console.log('users created');
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException();
+    }
   }
 }
