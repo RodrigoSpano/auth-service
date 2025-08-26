@@ -10,7 +10,7 @@ import { AuthModule } from './auth/auth.module';
   imports: [
     UserModule,
     DatabasseModule,
-    ConfigModule.forRoot({ envFilePath: '.env' }),
+    ConfigModule.forRoot({ envFilePath: '.env', isGlobal: true }),
     AuthModule,
   ],
   controllers: [AppController],
