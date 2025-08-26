@@ -7,6 +7,6 @@ export interface IUser {
 }
 
 export interface IUserDocument extends IUser, Document {
-  comparePassword(): Promise<boolean>;
+  comparePassword(candidatePassword: string): Promise<boolean>;
   hashPass(password: string): promise<string>;
 }

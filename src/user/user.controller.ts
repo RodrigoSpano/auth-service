@@ -12,11 +12,13 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
+import { PublicEndpoint } from 'src/utils/ispublic.decorator';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @PublicEndpoint()
   @Get('/seed')
   seed() {
     return this.userService.seed();
@@ -27,6 +29,7 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
+  @PublicEndpoint()
   @Get()
   findAll() {
     return this.userService.findAll();
