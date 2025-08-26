@@ -8,17 +8,17 @@ import {
   Delete,
   Query,
   BadRequestException,
-  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { PublicEndpoint } from 'src/utils/ispublic.decorator';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @PublicEndpoint()
   @Get('/seed')
   seed() {
     return this.userService.seed();
@@ -29,7 +29,7 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @PublicEndpoint()
   @Get()
   findAll() {
     return this.userService.findAll();
