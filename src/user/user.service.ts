@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
-  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -23,7 +23,7 @@ export class UserService {
     try {
       const newUser = await this.userModel.create(createUserDto);
       if (!newUser) {
-        throw new BadRequestException();
+        throw new InternalServerErrorException();
       }
       return newUser;
     } catch (error) {
@@ -56,33 +56,25 @@ export class UserService {
   }
 
   async findOneById(id: string): Promise<IUserDocument> {
+    const findUser = (await this.userModel.findById(id)) as IUserDocument;
+    if (!findUser) {
+      throw new NotFoundException();
+    }
+    return findUser;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
     try {
-      const findUser = (await this.userModel.findById(id)) as IUserDocument;
-      if (!findUser) {
-        throw new NotFoundException();
-      }
-      return findUser;
+      await this.userModel.updateOne({ _id: id }, updateUserDto);
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
     }
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
+  async updatePassword(id: string, newPassword: string): Promise<void> {
     try {
-      // verify if user exists
-      const user = await this.findOneById(id);
-
-      let finalData: UpdateUserDto = updateUserDto;
-      if (
-        updateUserDto.password != undefined &&
-        updateUserDto.password.length > 0
-      ) {
-        const { password } = updateUserDto;
-        const hashedPass = await user.hashPass(password);
-        finalData = { ...updateUserDto, password: hashedPass };
-      }
-      await this.userModel.updateOne({ _id: id }, finalData);
+      await this.userModel.updateOne({ _id: id }, { password: newPassword });
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();

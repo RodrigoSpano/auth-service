@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -13,6 +14,7 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
 import { PublicEndpoint } from 'src/utils/ispublic.decorator';
+import { UpdatePasswordUserDto } from './dto/request/change-password-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -48,9 +50,27 @@ export class UserController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     if (!Object.keys(updateUserDto).length) throw new BadRequestException();
+    // check if exists
+    await this.userService.findOneById(id);
     return this.userService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/password')
+  async changePassword(
+    @Param('id') id: string,
+    @Body() body: UpdatePasswordUserDto,
+  ) {
+    // srp (single responsability principle)
+    // each service should do his task, no more.
+    // thats why instead of doing all of this in the updatePassword service method, i call different methods here in the controller
+    // find user
+    const user = await this.userService.findOneById(id);
+    // hash new password using user.hashpass method
+    const hashedPassword = await user.hashPass(body.password);
+    // update password sending the hasedpassword
+    await this.userService.updatePassword(id, hashedPassword);
   }
 
   @Delete(':id')

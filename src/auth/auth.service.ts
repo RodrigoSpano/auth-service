@@ -35,7 +35,6 @@ export class AuthService {
 
   authenticate(userData: ILoginUserReq): LoginResponseDto {
     try {
-      // if ok generate jwt token
       const jwtPayload = { sub: userData._id, email: userData.email };
       const jwtToken = this.jwtService.sign(jwtPayload);
       return {
