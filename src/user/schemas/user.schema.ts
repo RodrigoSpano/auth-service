@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NextFunction } from 'express';
 import * as mongoose from 'mongoose';
@@ -42,3 +43,7 @@ UserSchema.methods.hashPass = async function (
   user.password = hashedPass;
   return hashedPass;
 };
+
+// export const UserModel = new mongoose.Model<mongoose.Schema<IUserDocument>>(
+//   UserSchema,
+// );
