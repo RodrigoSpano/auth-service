@@ -43,7 +43,3 @@ UserSchema.methods.hashPass = async function (
   user.password = hashedPass;
   return hashedPass;
 };
-
-// export const UserModel = new mongoose.Model<mongoose.Schema<IUserDocument>>(
-//   UserSchema,
-// );

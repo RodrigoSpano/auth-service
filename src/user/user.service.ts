@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
@@ -13,11 +14,7 @@ import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
-  constructor(
-    // @Inject('USER_MODEL')
-    // private readonly userModel: mongoose.Model<HydratedDocument<IUser>>,
-    private readonly userRepository: UserRepository,
-  ) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async create(createUserDto: CreateUserDto): Promise<void> {
     try {
@@ -43,7 +40,10 @@ export class UserService {
 
   async findOneByEmail(email: string): Promise<IUserDocument> {
     try {
-      const findUser = await this.userRepository.findOne({ email });
+      const findUser = await this.userRepository.findOne(
+        { email },
+        { _id: true },
+      );
       if (!findUser) {
         throw new NotFoundException();
       }
@@ -71,23 +71,24 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
     try {
-      // verify if user exists
-      const user = await this.findOneById(id);
-
-      let finalData: UpdateUserDto = updateUserDto;
-      if (
-        updateUserDto.password != undefined &&
-        updateUserDto.password.length > 0
-      ) {
-        const { password } = updateUserDto;
-        const hashedPass = await user.hashPass(password);
-        finalData = { ...updateUserDto, password: hashedPass };
-      }
-      await this.userRepository.updateOne({ _id: id }, finalData);
+      const updated = await this.userRepository.updateOne(
+        { _id: id },
+        updateUserDto,
+      );
+      if (updated?.modifiedCount == 0) throw new BadRequestException();
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
     }
+  }
+
+  async changePassword(id: string, password: string): Promise<void> {
+    const updatedUser = await this.userRepository.updateOne(
+      { _id: id },
+      { password },
+    );
+    if (updatedUser?.modifiedCount == 0)
+      throw new InternalServerErrorException();
   }
 
   async remove(id: string) {
