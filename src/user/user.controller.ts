@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -10,9 +12,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/request/create-user.dto';
-import { UpdateUserDto } from './dto/request/update-user.dto';
 import { PublicEndpoint } from 'src/utils/ispublic.decorator';
+import { UpdatePasswordDto, CreateUserDto, UpdateUserDto } from './dto/request';
 
 @Controller('user')
 export class UserController {
@@ -24,9 +25,16 @@ export class UserController {
     return this.userService.seed();
   }
 
+  @PublicEndpoint()
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const userExists = await this.userService.findOneByEmail(
+      createUserDto.email,
+    );
+    if (!userExists) {
+      return this.userService.create(createUserDto);
+    }
+    throw new BadRequestException('User already exists');
   }
 
   @PublicEndpoint()
@@ -48,9 +56,21 @@ export class UserController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     if (!Object.keys(updateUserDto).length) throw new BadRequestException();
+    await this.userService.findOneById(id);
     return this.userService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/password')
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    if (!Object.keys(updatePasswordDto).length) throw new BadRequestException();
+    const user = await this.userService.findOneById(id);
+    const hashedNewPassword = await user.hashPass(updatePasswordDto.password);
+    return this.userService.changePassword(id, hashedNewPassword);
   }
 
   @Delete(':id')

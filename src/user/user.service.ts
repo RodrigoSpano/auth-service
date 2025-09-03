@@ -1,31 +1,27 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/request/create-user.dto';
 import { UpdateUserDto } from './dto/request/update-user.dto';
-import mongoose, { type HydratedDocument } from 'mongoose';
-import type { IUser, IUserDocument } from 'src/types';
+import type { IUserDocument } from 'src/types';
 import { faker } from '@faker-js/faker';
+import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @Inject('USER_MODEL')
-    private readonly userModel: mongoose.Model<HydratedDocument<IUser>>,
-  ) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
-  async create(createUserDto: CreateUserDto): Promise<HydratedDocument<IUser>> {
+  async create(createUserDto: CreateUserDto): Promise<void> {
     try {
-      const newUser = await this.userModel.create(createUserDto);
+      const newUser = await this.userRepository.create(createUserDto);
       if (!newUser) {
         throw new BadRequestException();
       }
-      return newUser;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
@@ -33,18 +29,21 @@ export class UserService {
   }
 
   // todo => filters/queries
-  async findAll(): Promise<IUser[]> {
+  async findAll(): Promise<IUserDocument[]> {
     try {
-      return await this.userModel.find({});
+      return (await this.userRepository.find({})) as IUserDocument[];
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
     }
   }
 
-  async findOneByEmail(email: string): Promise<HydratedDocument<IUser>> {
+  async findOneByEmail(email: string): Promise<IUserDocument> {
     try {
-      const findUser = await this.userModel.findOne({ email });
+      const findUser = await this.userRepository.findOne(
+        { email },
+        { _id: true },
+      );
       if (!findUser) {
         throw new NotFoundException();
       }
@@ -57,7 +56,9 @@ export class UserService {
 
   async findOneById(id: string): Promise<IUserDocument> {
     try {
-      const findUser = (await this.userModel.findById(id)) as IUserDocument;
+      const findUser = (await this.userRepository.findOne({
+        _id: id,
+      })) as IUserDocument;
       if (!findUser) {
         throw new NotFoundException();
       }
@@ -70,29 +71,30 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<void> {
     try {
-      // verify if user exists
-      const user = await this.findOneById(id);
-
-      let finalData: UpdateUserDto = updateUserDto;
-      if (
-        updateUserDto.password != undefined &&
-        updateUserDto.password.length > 0
-      ) {
-        const { password } = updateUserDto;
-        const hashedPass = await user.hashPass(password);
-        finalData = { ...updateUserDto, password: hashedPass };
-      }
-      await this.userModel.updateOne({ _id: id }, finalData);
+      const updated = await this.userRepository.updateOne(
+        { _id: id },
+        updateUserDto,
+      );
+      if (updated?.modifiedCount == 0) throw new BadRequestException();
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException();
     }
   }
 
+  async changePassword(id: string, password: string): Promise<void> {
+    const updatedUser = await this.userRepository.updateOne(
+      { _id: id },
+      { password },
+    );
+    if (updatedUser?.modifiedCount == 0)
+      throw new InternalServerErrorException();
+  }
+
   async remove(id: string) {
     try {
       const findUser = await this.findOneById(id);
-      await this.userModel.deleteOne({ _id: id });
+      await this.userRepository.deleteOne({ _id: id });
       return `user ${findUser.fullname} deleted`;
     } catch (error) {
       console.log(error);
@@ -101,18 +103,18 @@ export class UserService {
   }
 
   async deleteAll() {
-    await this.userModel.deleteMany({});
+    await this.userRepository.deleteMany({});
     console.log('all deleted');
   }
 
   async seed() {
     try {
-      const fakeArr: IUser[] = Array.from({ length: 20 }, () => ({
+      const fakeArr = Array.from({ length: 20 }, () => ({
         fullname: faker.internet.username(),
         email: faker.internet.email(),
         password: faker.internet.password(),
-      }));
-      await this.userModel.insertMany(fakeArr);
+      })) as IUserDocument[];
+      await this.userRepository.insertMany(fakeArr);
       console.log('users created');
     } catch (error) {
       console.log(error);
